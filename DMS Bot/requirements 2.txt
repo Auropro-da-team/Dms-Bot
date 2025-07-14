@@ -1,4 +1,5 @@
 streamlit
+Vertexai
 google-cloud-aiplatform
 google-auth
 google-generativeai
