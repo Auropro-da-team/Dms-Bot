@@ -6,14 +6,14 @@ import logging
 from typing import List, Dict, Any, Optional
 from google.cloud import storage
 from google.oauth2 import service_account
+from google import genai
+from google.genai import types
 import google.auth
+
 google.auth._default._get_explicit_environ_credentials = lambda: None
 google.auth._default._detect_gce = lambda: False
 
 
-# --- IMPORTS FOR GOOGLE.GENAI (THE CORRECT WAY FOR RAG CORPUS) ---
-from google import genai
-from google.genai import types
 
 # --- Authentication specific import ---
 
