@@ -96,6 +96,8 @@ class DMSChatbot:
         self.model_name = "gemini-2.0-flash-exp"  # Using the latest model
         self.credentials = None
         self.auth_success = False
+        self.storage_client = None
+
         
     def setup_authentication(self) -> bool:
         """Setup authentication using Streamlit secrets"""
@@ -138,7 +140,11 @@ class DMSChatbot:
                 service_account_dict,
                 scopes=['https://www.googleapis.com/auth/cloud-platform']
             )
-            
+            self.storage_client = storage.Client(
+                credentials=self.credentials, 
+                project=self.credentials.project_id
+            )
+
             st.sidebar.success("✅ Authentication successful using Streamlit secrets")
             return True
             
@@ -147,77 +153,11 @@ class DMSChatbot:
             # Show more detailed error information
             st.sidebar.error("Please check your secrets.toml file format")
             return False
-    '''
-    def _auth_from_file(self) -> bool:
-        """Authenticate using service account file"""
-        if os.path.exists(SERVICE_ACCOUNT_JSON_PATH):
-            try:
-                self.credentials = service_account.Credentials.from_service_account_file(
-                    SERVICE_ACCOUNT_JSON_PATH,
-                    scopes=['https://www.googleapis.com/auth/cloud-platform']
-                )
-                st.sidebar.success(f"✅ Loaded service account from file")
-                return True
-            except Exception as e:
-                st.sidebar.error(f"❌ Error loading service account: {str(e)}")
-                return False
-        else:
-            st.sidebar.warning(f"⚠️ Service account file not found at: `{SERVICE_ACCOUNT_JSON_PATH}`")
-            return False
-    
-    def _auth_from_input(self) -> bool:
-        """Authenticate using manual JSON input"""
-        json_key_input = st.sidebar.text_area(
-            "Paste Service Account JSON:",
-            height=150,
-            help="Paste the entire contents of your service account JSON file here.",
-            type="password"
-        )
-        if json_key_input:
-            try:
-                key_data = json.loads(json_key_input)
-                self.credentials = service_account.Credentials.from_service_account_info(
-                    key_data,
-                    scopes=['https://www.googleapis.com/auth/cloud-platform']
-                )
-                st.sidebar.success("✅ Service account loaded from input")
-                return True
-            except Exception as e:
-                st.sidebar.error(f"❌ Error parsing JSON: {str(e)}")
-                return False
-        return False
-    
-    def _auth_from_env(self) -> bool:
-        """Authenticate using environment variables"""
-        google_creds = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
-        if google_creds:
-            try:
-                if os.path.exists(google_creds):
-                    self.credentials = service_account.Credentials.from_service_account_file(
-                        google_creds,
-                        scopes=['https://www.googleapis.com/auth/cloud-platform']
-                    )
-                else:
-                    # Try parsing as JSON string
-                    key_data = json.loads(google_creds)
-                    self.credentials = service_account.Credentials.from_service_account_info(
-                        key_data,
-                        scopes=['https://www.googleapis.com/auth/cloud-platform']
-                    )
-                st.sidebar.success("✅ Using environment variable credentials")
-                return True
-            except Exception as e:
-                st.sidebar.error(f"❌ Error with environment credentials: {str(e)}")
-                return False
-        else:
-            st.sidebar.warning("⚠️ GOOGLE_APPLICATION_CREDENTIALS not found in environment")
-            return False
-    
+
     def _auth_default(self) -> bool:
-        """Use default credentials"""
-        st.sidebar.info("🔄 Attempting to use default credentials...")
-        return True
-    '''
+    st.sidebar.warning("⚠️ Default credentials disabled. Use secrets.toml instead.")
+    return False
+
     def initialize_clients(self) -> bool:
         """Initialize Vertex AI and GenAI clients"""
         try:
