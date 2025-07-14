@@ -87,10 +87,12 @@ class DMSChatbot:
     def __init__(self):
         self.genai_client = None
         self.tools_for_gemini = []
-        self.model_name = "gemini-1.5-flash-001"  # Using stable model for reliability
+        self.model_name = "gemini-1.5-flash-001" # Using a stable model
         self.credentials = None
         self.auth_success = False
         
+    # --- START OF AUTHENTICATION FIX FOR STREAMLIT CLOUD ---
+    # Replaced the interactive dropdown with an automatic method for Streamlit Cloud
     def setup_authentication_from_secrets(self) -> bool:
         """Setup authentication automatically using Streamlit secrets"""
         try:
@@ -108,10 +110,12 @@ class DMSChatbot:
         except Exception as e:
             st.sidebar.error(f"❌ Authentication from secrets failed: {str(e)}")
             return False
+    # --- END OF AUTHENTICATION FIX ---
     
     def initialize_clients(self) -> bool:
         """Initialize Vertex AI and GenAI clients"""
         try:
+            # This now correctly uses the credentials loaded from secrets
             vertexai.init(
                 project=GCP_PROJECT_ID, 
                 location=GCP_REGION, 
@@ -124,6 +128,7 @@ class DMSChatbot:
                 location=GCP_REGION,
             )
             
+            # This definition is kept for reference; RAG is enabled on the backend
             self.tools_for_gemini = [
                 types.Tool(
                     retrieval=types.Retrieval(
@@ -169,14 +174,16 @@ class DMSChatbot:
             query_type = self.classify_query_type(user_query)
             genai_contents = [types.Content(role="user", parts=[types.Part(text=self.get_enhanced_persona_prompt(user_query, query_type))])]
             
-            # --- START OF API CALL FIX ---
-            # This is the definitive fix. We use the old-style syntax that passes parameters
-            # individually, which is compatible with the library version on Streamlit Cloud.
+            # --- START OF FINAL API CALL FIX (BACKWARD-COMPATIBLE) ---
+            # This uses the old-style individual parameters, which is required by the
+            # older SDK version that Streamlit Cloud has installed for your app.
+            # This avoids the 'unexpected keyword argument generation_config' error.
+            
             if query_type in ["greeting", "general"]:
                 response_stream = self.genai_client.models.generate_content_stream(
                     model_name=self.model_name,
                     contents=genai_contents,
-                    # Old-style parameters
+                    # Pass parameters directly instead of using a config object
                     temperature=0.7,
                     top_p=0.9,
                     top_k=40,
@@ -187,15 +194,15 @@ class DMSChatbot:
                 response_stream = self.genai_client.models.generate_content_stream(
                     model_name=self.model_name,
                     contents=genai_contents,
-                    # Old-style parameters
+                    # Pass parameters directly instead of using a config object
                     temperature=0.1,
                     top_p=0.9,
                     top_k=40,
                     max_output_tokens=8192,
                     candidate_count=1
-                    # 'tools' parameter is correctly omitted as RAG is backend-enabled.
+                    # 'tools' parameter is correctly omitted as RAG is enabled on the backend.
                 )
-            # --- END OF API CALL FIX ---
+            # --- END OF FINAL API CALL FIX ---
             
             response_text = ""
             retrieved_sources = []
@@ -250,6 +257,7 @@ def get_chatbot():
 
 chatbot = get_chatbot()
 
+# --- Use the automatic, non-interactive authentication method for Streamlit Cloud ---
 if not chatbot.auth_success:
     chatbot.auth_success = chatbot.setup_authentication_from_secrets()
 
