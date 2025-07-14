@@ -1,13 +1,1 @@
-{
-  "type": "service_account",
-  "project_id": "prj-auropro-dev",
-  "private_key_id": "404fd024f22636996e7456f46ea75e4ebff4573e",
-  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDb82DqSnhWPxs3\nuiW19dubacyXn32DL4xHwkSOVnYebhLO5y7rV2nLuPeeU+uSjYdWL9FppiImp8+f\nm2IKM4e8MNiFLyPZxqeutNp/g+z6G+F/iwlDfn6UGfsbv8KO5VeT8J0v9V8LToqg\nxii5VQfHtZ6pFFi4X1DoxJ27EsvIDZe3SJ1py5rupoTfuFaTUrKzZdZlV0h/9zPG\nelSwbeF/1i6SJgTxUr6f1Q97VSTw2lDqSXm721SrEi3GV49bkNpZsgK8OxPHkhlC\ni/g5fpCGGDhKgmdRWc9UYrJymtdBsacBgey6hqLmPnzFk/w9i6V/5K5ecflsoMgc\nyW3/xkI7AgMBAAECggEAE5rWZRu9LSbT1LxFVzoyWGBuSYeARvyqeszwkmVXgu/Z\nwlJt5rE0b2GtxJGDWl0+FmsNteaGfb6QbZAKhZFBRH9wFTL19ZfU42ggX6RRL5vj\nlhw896SjQK0uKjOF8nmzvC6CvD8ZOSdHiPwQrjBLkLv6B+UV4V0xl4XK711GB68w\nJXMZ2pfts3cYiI4m6n+Sb0MrEMWB+/vzrAhBYwhKirBRzZUI6G0dnPqGTKAedfv6\nti4IA2ebujDN46N44yW33yjste4Uu/nce3Rtm2K1enZOSIq/VM1ll3LFvelwaZ5j\nbnKpVTLDDEOCl18vJIQM4R6a4c1vci1q8kEASFGRLQKBgQD2UnQNjOlwUP7YVZOe\nKMaJZC3Ay82eZL4dMLlye3GWMmm9L5K8f+7r7yPMvpsRpeFCLHCDr+QVj2gGd06f\ndpN6L84dfd6Cixc7+n/LjBOwTTUgoJ1oGlGYLcVn3X4Rhcm1ndvk4NygisL/bpSz\np/GFDL+LFdmhsoSyCUS+e4RMjQKBgQDkl616r+hEXgfpjvS75MYwEM8F5DB4f11N\nXboo/hwQRZtmrJ+p7pK8OeDoUivnxU+q9+0RavjArwAy/YyxowHuushQUBkBP7Jk\nRL4kfYwk/z7fLkPAMYAOy558+O+07MHKp9trGL6/zxan9tWgunMr5wRx3V1o8e0O\nqZNBcA+r5wKBgGHiFCIKW/15Ajx/jUCtXW/dcl0J3/TQfcflw9vdeB7Ce8hlLj9f\n61awWh6To9WYgHImbLO34sA6k5D2OjUeDq7gblzD1vczRJFeEwiU6oIFvFXx3Xsv\n8jqx/Z8volhePPDCAU7rmGDno2OT0t2toElJ7pfbn/cklJyXGE1FkiZFAoGAOCK/\naWeVZGSrEMIYe6Pcv6UBEfNNq+mrIfqoYrS0c5KEbRxrQTHjOvIDt0mmmo4r2FJ2\nF1brq3XOWLdHO8BKEzQvSPnCijn4NwNipldmeRdteyVDYglF51w9mXcQdp/Fn1zF\nV3GGNlhGugy1vXjMG7Xps4SnEcSHcJhYHzPDxXUCgYEAupCD508qz11tZmW8vPKv\nwqUOhZLr+HiCncrtCNUlPVIS1GwOdksjov8g03gph0R7aebz3qmIha7v+F1C6VHh\n1iYDcTt5U7Mjx8xNwxoOiMASGbUAUzQ+2VWeSbjdkkhDF17W0zKsPwnY0REybFIE\nE0AT49TLItX/wtq4yDD8+zo=\n-----END PRIVATE KEY-----\n",
-  "client_email": "vertexaisa@prj-auropro-dev.iam.gserviceaccount.com",
-  "client_id": "100543648325035263068",
-  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-  "token_uri": "https://oauth2.googleapis.com/token",
-  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/vertexaisa%40prj-auropro-dev.iam.gserviceaccount.com",
-  "universe_domain": "googleapis.com"
-}
+
