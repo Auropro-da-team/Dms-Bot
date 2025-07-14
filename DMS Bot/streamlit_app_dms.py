@@ -6,8 +6,8 @@ import logging
 from typing import List, Dict, Any, Optional
 
 # --- IMPORTS FOR GOOGLE.GENAI (THE CORRECT WAY FOR RAG CORPUS) ---
-from google import genai
-from google.genai import types
+import google.generativeai as genai
+from google.generativeai import types
 
 # --- Authentication specific import ---
 from google.oauth2 import service_account
