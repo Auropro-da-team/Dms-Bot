@@ -312,12 +312,14 @@ If the question cannot be answered from the documentation, clearly state this an
 
     def process_query(self, user_query: str) -> tuple[str, List[Dict[str, Any]]]:
         """Process user query with intelligent routing - RAG only when needed"""
-        if self.genai_client is None:
-            logger.error("genai_client is not initialized.")
-            return "❌ GenAI client not initialized. Please try again later.", []
+
 
         
         try:
+            if self.genai_client is None:
+                logger.error("GenAI client is not initialized.")
+                return "❌ Internal error: GenAI client not initialized.", []
+
             # Classify query type to determine if RAG search is needed
             query_type = self.classify_query_type(user_query)
             
@@ -539,13 +541,18 @@ if chatbot.auth_success and chatbot.genai_client:
         with st.chat_message("assistant"):
             # Show different spinner messages based on query type
             query_type = chatbot.classify_query_type(prompt)
-            
-            if query_type in ["greeting", "general"]:
-                with st.spinner("💭 Thinking..."):
-                    response_text, sources = chatbot.process_query(prompt)
+            result = chatbot.process_query(prompt)
+            if result:
+                response_text, sources = result
             else:
-                with st.spinner("🤔 Thinking and searching the documentation..."):
-                    response_text, sources = chatbot.process_query(prompt)
+                response_text, sources = "❌ No response generated due to internal error.", []
+
+            #if query_type in ["greeting", "general"]:
+                #with st.spinner("💭 Thinking..."):
+                    #response_text, sources = chatbot.process_query(prompt)
+            #else:
+                #with st.spinner("🤔 Thinking and searching the documentation..."):
+                    #response_text, sources = chatbot.process_query(prompt)
             
             # Display response
             st.markdown(response_text)
