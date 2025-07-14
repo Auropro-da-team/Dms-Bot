@@ -1,0 +1,8 @@
+streamlit
+google-cloud-aiplatform
+google-auth
+google-generativeai
+python-dotenv
+typing-extensions
+shapely
+numpy

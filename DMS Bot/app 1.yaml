@@ -1,0 +1,21 @@
+runtime: python310
+service: dmsbotdemo
+instance_class: F2
+
+entrypoint: streamlit run streamlit_app_dms.py --server.port=$PORT --server.address=0.0.0.0 --server.headless=true
+
+env_variables:
+  SERVICE_ACCOUNT_JSON_PATH: "/app/prj-auropro-dev-404fd024f226.json"
+  GOOGLE_APPLICATION_CREDENTIALS: "/app/prj-auropro-dev-404fd024f226.json"
+  GCP_PROJECT_ID: "prj-auropro-dev"
+  GCP_REGION: "us-central1"
+
+handlers:
+- url: /.*
+  script: auto
+  secure: always
+
+automatic_scaling:
+  target_cpu_utilization: 0.65
+  min_instances: 1
+  max_instances: 10
