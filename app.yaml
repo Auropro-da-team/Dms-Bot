@@ -1,0 +1,13 @@
+runtime: custom
+env: flex
+service: dmsbotdemo
+
+env_variables:
+  SERVICE_ACCOUNT_JSON_PATH: "/app/prj-auropro-dev-404fd024f226.json"
+  GOOGLE_APPLICATION_CREDENTIALS: "/app/prj-auropro-dev-404fd024f226.json"
+  GCP_PROJECT_ID: "prj-auropro-dev"
+  GCP_REGION: "us-central1"
+
+automatic_scaling:
+  min_num_instances: 1
+  max_num_instances: 10
