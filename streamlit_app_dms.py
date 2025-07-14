@@ -12,8 +12,6 @@ from google.genai import types
 # --- Authentication specific import ---
 from google.oauth2 import service_account
 
-# --- Configuration Variables ---
-SERVICE_ACCOUNT_JSON_PATH = os.environ.get("SERVICE_ACCOUNT_JSON_PATH", "prj-auropro-dev-404fd024f226.json")
 
 GCP_PROJECT_ID = "prj-auropro-dev"
 GCP_REGION = "us-central1"
@@ -143,7 +141,7 @@ class DMSChatbot:
             # Show more detailed error information
             st.sidebar.error("Please check your secrets.toml file format")
             return False
-    
+    '''
     def _auth_from_file(self) -> bool:
         """Authenticate using service account file"""
         if os.path.exists(SERVICE_ACCOUNT_JSON_PATH):
@@ -213,7 +211,7 @@ class DMSChatbot:
         """Use default credentials"""
         st.sidebar.info("🔄 Attempting to use default credentials...")
         return True
-    
+    '''
     def initialize_clients(self) -> bool:
         """Initialize Vertex AI and GenAI clients"""
         try:
