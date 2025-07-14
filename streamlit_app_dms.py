@@ -6,13 +6,16 @@ import logging
 from typing import List, Dict, Any, Optional
 from google.cloud import storage
 from google.oauth2 import service_account
+import google.auth
+google.auth._default._get_explicit_environ_credentials = lambda: None
+google.auth._default._detect_gce = lambda: False
+
 
 # --- IMPORTS FOR GOOGLE.GENAI (THE CORRECT WAY FOR RAG CORPUS) ---
 from google import genai
 from google.genai import types
 
 # --- Authentication specific import ---
-from google.oauth2 import service_account
 
 
 GCP_PROJECT_ID = "prj-auropro-dev"
@@ -153,9 +156,7 @@ class DMSChatbot:
     def _auth_default(self) -> bool:
         st.sidebar.warning("⚠️ Default credentials disabled. Use secrets.toml instead.")
         return False
-import google.auth
-google.auth._default._get_explicit_environ_credentials = lambda: None
-google.auth._default._detect_gce = lambda: False
+
 
     def initialize_clients(self) -> bool:
         """Initialize Vertex AI and GenAI clients"""
