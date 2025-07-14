@@ -96,33 +96,52 @@ class DMSChatbot:
     def setup_authentication(self) -> bool:
         """Setup authentication using Streamlit secrets"""
         try:
-            # Try to get credentials from Streamlit secrets first
-            if "gcp_service_account" in st.secrets:
-                # Use Streamlit secrets
-                self.credentials = service_account.Credentials.from_service_account_info(
-                    st.secrets["gcp_service_account"],
-                    scopes=['https://www.googleapis.com/auth/cloud-platform']
-                )
-                st.sidebar.success("✅ Using Streamlit secrets for authentication")
-                return True
-            else:
-                # Fallback to other methods
-                st.sidebar.header("🔐 Authentication")
-                auth_method = st.sidebar.selectbox(
-                    "Choose authentication method:",
-                    ["Service Account JSON File", "Manual JSON Input", "Environment Variables", "Default Credentials"]
-                )
-                
-                if auth_method == "Service Account JSON File":
-                    return self._auth_from_file()
-                elif auth_method == "Manual JSON Input":
-                    return self._auth_from_input()
-                elif auth_method == "Environment Variables":
-                    return self._auth_from_env()
-                else:
-                    return self._auth_default()
+            # Debug: Check if secrets exist
+            st.sidebar.info("🔍 Checking authentication...")
+            
+            # Check if gcp_service_account exists in secrets
+            if "gcp_service_account" not in st.secrets:
+                st.sidebar.error("❌ 'gcp_service_account' not found in Streamlit secrets")
+                st.sidebar.error("Please ensure your secrets.toml file contains the [gcp_service_account] section")
+                return False
+            
+            # Get the service account info from secrets
+            service_account_info = st.secrets["gcp_service_account"]
+            
+            # Debug: Show what keys are available (without showing values)
+            available_keys = list(service_account_info.keys())
+            st.sidebar.info(f"📋 Available keys in secrets: {available_keys}")
+            
+            # Required keys for service account
+            required_keys = [
+                "type", "project_id", "private_key_id", "private_key", 
+                "client_email", "client_id", "auth_uri", "token_uri", 
+                "auth_provider_x509_cert_url", "client_x509_cert_url", 
+                "universe_domain"
+            ]
+            
+            # Check if all required keys are present
+            missing_keys = [key for key in required_keys if key not in service_account_info]
+            if missing_keys:
+                st.sidebar.error(f"❌ Missing required keys in secrets: {missing_keys}")
+                return False
+            
+            # Convert StreamlitSecrets to regular dict
+            service_account_dict = dict(service_account_info)
+            
+            # Create credentials from service account info
+            self.credentials = service_account.Credentials.from_service_account_info(
+                service_account_dict,
+                scopes=['https://www.googleapis.com/auth/cloud-platform']
+            )
+            
+            st.sidebar.success("✅ Authentication successful using Streamlit secrets")
+            return True
+            
         except Exception as e:
             st.sidebar.error(f"❌ Authentication failed: {str(e)}")
+            # Show more detailed error information
+            st.sidebar.error("Please check your secrets.toml file format")
             return False
     
     def _auth_from_file(self) -> bool:
@@ -198,15 +217,12 @@ class DMSChatbot:
     def initialize_clients(self) -> bool:
         """Initialize Vertex AI and GenAI clients"""
         try:
-            # Initialize Vertex AI
-            if self.credentials:
-                vertexai.init(
-                    project=GCP_PROJECT_ID, 
-                    location=GCP_REGION, 
-                    credentials=self.credentials
-                )
-            else:
-                vertexai.init(project=GCP_PROJECT_ID, location=GCP_REGION)
+            # Initialize Vertex AI with credentials
+            vertexai.init(
+                project=GCP_PROJECT_ID, 
+                location=GCP_REGION, 
+                credentials=self.credentials
+            )
             
             # Initialize GenAI client
             self.genai_client = genai.Client(
@@ -522,7 +538,7 @@ def get_chatbot():
 
 chatbot = get_chatbot()
 
-# Authentication setup - automatically try to authenticate
+# Authentication setup - automatically authenticate using Streamlit secrets
 if not chatbot.auth_success:
     chatbot.auth_success = chatbot.setup_authentication()
 
@@ -611,13 +627,34 @@ if chatbot.auth_success and chatbot.genai_client:
         st.rerun()
 
 else:
-    st.warning("⚠️ Please configure authentication in the sidebar to use the chatbot.")
+    st.error("❌ Authentication failed. Please check your Streamlit secrets configuration.")
     st.markdown("""
     ### 🔧 **Setup Instructions:**
-    1. **Choose an authentication method** from the sidebar
-    2. **Provide your Google Cloud credentials**
-    3. **Ensure your service account has the required permissions**
-    4. **Verify your RAG Corpus is configured correctly**
+    1. **Ensure your secrets.toml file is properly configured with the GCP service account**
+    2. **Verify the service account has the required permissions**
+    3. **Check that the RAG Corpus is configured correctly**
+    
+    **Your secrets.toml file should look like this:**
+    ```toml
+    [gcp_service_account]
+    type = "service_account"
+    project_id = "prj-auropro-dev"
+    private_key_id = "your_private_key_id_here"
+    private_key = "-----BEGIN PRIVATE KEY-----\\nYOUR_PRIVATE_KEY_HERE\\n-----END PRIVATE KEY-----\\n"
+    client_email = "vertex@prj-auropro-dev.iam.gserviceaccount.com"
+    client_id = "your_client_id_here"
+    auth_uri = "https://accounts.google.com/o/oauth2/auth"
+    token_uri = "https://oauth2.googleapis.com/token"
+    auth_provider_x509_cert_url = "https://www.googleapis.com/oauth2/v1/certs"
+    client_x509_cert_url = "https://www.googleapis.com/robot/v1/metadata/x509/vertex%40prj-auropro-dev.iam.gserviceaccount.com"
+    universe_domain = "googleapis.com"
+    ```
+    
+    **Important Notes:**
+    - Make sure there are no extra spaces or line breaks in your secrets.toml file
+    - The private_key should be on a single line with \\n for line breaks
+    - All values should be in quotes
+    - The file should be placed in the .streamlit/ folder in your project root
     """)
 
 # Footer information
