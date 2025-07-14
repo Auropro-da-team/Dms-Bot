@@ -96,7 +96,7 @@ class DMSChatbot:
     def __init__(self):
         self.genai_client = None
         self.tools_for_gemini = []
-        self.model_name = "gemini-2.0-flash-exp"  # Using the latest model
+        self.model_name = "gemini-1.5-flash-001"  # Using a stable, recommended model
         self.credentials = None
         self.auth_success = False
         self.storage_client = None
@@ -312,9 +312,6 @@ If the question cannot be answered from the documentation, clearly state this an
 
     def process_query(self, user_query: str) -> tuple[str, List[Dict[str, Any]]]:
         """Process user query with intelligent routing - RAG only when needed"""
-
-
-        
         try:
             if self.genai_client is None:
                 logger.error("GenAI client is not initialized.")
@@ -335,75 +332,54 @@ If the question cannot be answered from the documentation, clearly state this an
             
             # Adjust generation config based on query type
             if query_type in ["greeting", "general"]:
-                # For greetings/general: No RAG, higher temperature for more natural responses
                 generate_content_config = types.GenerateContentConfig(
-                    temperature=0.7,  # Higher for more natural conversation
+                    temperature=0.7,
                     top_p=0.9,
                     top_k=40,
-                    max_output_tokens=2048,  # Shorter responses for greetings
+                    max_output_tokens=2048,
                     candidate_count=1,
-                    
                     safety_settings=[
-                        types.SafetySetting(
-                            category="HARM_CATEGORY_HATE_SPEECH",
-                            threshold="BLOCK_MEDIUM_AND_ABOVE"
-                        ),
-                        types.SafetySetting(
-                            category="HARM_CATEGORY_DANGEROUS_CONTENT",
-                            threshold="BLOCK_MEDIUM_AND_ABOVE"
-                        ),
-                        types.SafetySetting(
-                            category="HARM_CATEGORY_SEXUALLY_EXPLICIT",
-                            threshold="BLOCK_MEDIUM_AND_ABOVE"
-                        ),
-                        types.SafetySetting(
-                            category="HARM_CATEGORY_HARASSMENT",
-                            threshold="BLOCK_MEDIUM_AND_ABOVE"
-                        )
+                        types.SafetySetting(category="HARM_CATEGORY_HATE_SPEECH", threshold="BLOCK_MEDIUM_AND_ABOVE"),
+                        types.SafetySetting(category="HARM_CATEGORY_DANGEROUS_CONTENT", threshold="BLOCK_MEDIUM_AND_ABOVE"),
+                        types.SafetySetting(category="HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold="BLOCK_MEDIUM_AND_ABOVE"),
+                        types.SafetySetting(category="HARM_CATEGORY_HARASSMENT", threshold="BLOCK_MEDIUM_AND_ABOVE")
                     ],
-                    
                     response_mime_type="text/plain",
-                    # NO TOOLS for greetings/general queries
                 )
+                tools_to_use = None # No RAG tools for general chat
             else:
-                # For DMS-specific queries: Use RAG with lower temperature
                 generate_content_config = types.GenerateContentConfig(
-                    temperature=0.1,  # Lower for more consistent responses
+                    temperature=0.1,
                     top_p=0.9,
                     top_k=40,
-                    max_output_tokens=8192,  # Increased for comprehensive responses
+                    max_output_tokens=8192,
                     candidate_count=1,
-                    
                     safety_settings=[
-                        types.SafetySetting(
-                            category="HARM_CATEGORY_HATE_SPEECH",
-                            threshold="BLOCK_MEDIUM_AND_ABOVE"
-                        ),
-                        types.SafetySetting(
-                            category="HARM_CATEGORY_DANGEROUS_CONTENT",
-                            threshold="BLOCK_MEDIUM_AND_ABOVE"
-                        ),
-                        types.SafetySetting(
-                            category="HARM_CATEGORY_SEXUALLY_EXPLICIT",
-                            threshold="BLOCK_MEDIUM_AND_ABOVE"
-                        ),
-                        types.SafetySetting(
-                            category="HARM_CATEGORY_HARASSMENT",
-                            threshold="BLOCK_MEDIUM_AND_ABOVE"
-                        )
+                        types.SafetySetting(category="HARM_CATEGORY_HATE_SPEECH", threshold="BLOCK_MEDIUM_AND_ABOVE"),
+                        types.SafetySetting(category="HARM_CATEGORY_DANGEROUS_CONTENT", threshold="BLOCK_MEDIUM_AND_ABOVE"),
+                        types.SafetySetting(category="HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold="BLOCK_MEDIUM_AND_ABOVE"),
+                        types.SafetySetting(category="HARM_CATEGORY_HARASSMENT", threshold="BLOCK_MEDIUM_AND_ABOVE")
                     ],
-                    
                     response_mime_type="text/plain",
-                    tools=self.tools_for_gemini  # Use RAG tools only for DMS queries
                 )
+                tools_to_use = self.tools_for_gemini # Use RAG tools for DMS queries
             
             # Generate response with streaming
             response_stream = self.genai_client.models.generate_content_stream(
                 model=self.model_name,
                 contents=genai_contents,
                 config=generate_content_config,
+                tools=tools_to_use
             )
             
+            # --------------------- START OF FIX ---------------------
+            # Add a safety check to ensure the API call returned a valid stream
+            if response_stream is None:
+                logger.error("API call to generate_content_stream returned None. This indicates a potential authentication or client configuration issue.")
+                error_msg = "I'm sorry, I was unable to connect to the AI service. Please ask the administrator to check the application logs."
+                return error_msg, []
+            # ---------------------- END OF FIX ----------------------
+
             response_text = ""
             retrieved_sources = []
             sources_set = set()
@@ -455,7 +431,7 @@ If the question cannot be answered from the documentation, clearly state this an
             return response_text, retrieved_sources
             
         except Exception as e:
-            logger.error(f"Query processing error: {str(e)}")
+            logger.error(f"Query processing error: {str(e)}", exc_info=True)
             error_msg = f"I encountered an error while processing your query: {str(e)}. Please try again or rephrase your question."
             return error_msg, []
     
@@ -539,27 +515,22 @@ if chatbot.auth_success and chatbot.genai_client:
         
         # Generate response
         with st.chat_message("assistant"):
-            # Show different spinner messages based on query type
             query_type = chatbot.classify_query_type(prompt)
-            try:
-                result = chatbot.process_query(prompt)
-                if result is None:
-                    raise ValueError("process_query returned None")
-                if isinstance(result, tuple) and len(result) == 2:
-                    response_text, sources = result
-                else:
-                    raise ValueError("Unexpected return type from process_query(): " + str(type(result)))
-            except Exception as e:
-                response_text = f"❌ System error: {str(e)}"
-                sources = []
-
-            #if query_type in ["greeting", "general"]:
-                #with st.spinner("💭 Thinking..."):
-                    #response_text, sources = chatbot.process_query(prompt)
-            #else:
-                #with st.spinner("🤔 Thinking and searching the documentation..."):
-                    #response_text, sources = chatbot.process_query(prompt)
             
+            # --------------------- START OF FIX ---------------------
+            # Restore the spinner and simplify the call to process_query
+            spinner_text = "🤔 Thinking and searching the documentation..." if query_type == "dms_specific" else "💭 Thinking..."
+            with st.spinner(spinner_text):
+                try:
+                    # The process_query method is designed to always return a tuple, even on error.
+                    response_text, sources = chatbot.process_query(prompt)
+                except Exception as e:
+                    # This is a fallback for truly unexpected errors.
+                    logger.error(f"A critical, unhandled error occurred in the chat loop: {e}", exc_info=True)
+                    response_text = f"❌ A critical system error occurred. Please contact support."
+                    sources = []
+            # ---------------------- END OF FIX ----------------------
+
             # Display response
             st.markdown(response_text)
             
