@@ -6,8 +6,7 @@ import logging
 from typing import List, Dict, Any, Optional
 
 # --- IMPORTS FOR GOOGLE.GENAI (THE CORRECT WAY FOR RAG CORPUS) ---
-import google.generativeai as genai  # ✅ Correct
-
+from google import genai
 from google.genai import types
 
 # --- Authentication specific import ---
@@ -95,22 +94,33 @@ class DMSChatbot:
         self.auth_success = False
         
     def setup_authentication(self) -> bool:
-        """Setup authentication with improved error handling"""
-        st.sidebar.header("🔐 Authentication")
-        auth_method = st.sidebar.selectbox(
-            "Choose authentication method:",
-            ["Service Account JSON File", "Manual JSON Input", "Environment Variables", "Default Credentials"]
-        )
-        
+        """Setup authentication using Streamlit secrets"""
         try:
-            if auth_method == "Service Account JSON File":
-                return self._auth_from_file()
-            elif auth_method == "Manual JSON Input":
-                return self._auth_from_input()
-            elif auth_method == "Environment Variables":
-                return self._auth_from_env()
+            # Try to get credentials from Streamlit secrets first
+            if "gcp_service_account" in st.secrets:
+                # Use Streamlit secrets
+                self.credentials = service_account.Credentials.from_service_account_info(
+                    st.secrets["gcp_service_account"],
+                    scopes=['https://www.googleapis.com/auth/cloud-platform']
+                )
+                st.sidebar.success("✅ Using Streamlit secrets for authentication")
+                return True
             else:
-                return self._auth_default()
+                # Fallback to other methods
+                st.sidebar.header("🔐 Authentication")
+                auth_method = st.sidebar.selectbox(
+                    "Choose authentication method:",
+                    ["Service Account JSON File", "Manual JSON Input", "Environment Variables", "Default Credentials"]
+                )
+                
+                if auth_method == "Service Account JSON File":
+                    return self._auth_from_file()
+                elif auth_method == "Manual JSON Input":
+                    return self._auth_from_input()
+                elif auth_method == "Environment Variables":
+                    return self._auth_from_env()
+                else:
+                    return self._auth_default()
         except Exception as e:
             st.sidebar.error(f"❌ Authentication failed: {str(e)}")
             return False
@@ -512,7 +522,7 @@ def get_chatbot():
 
 chatbot = get_chatbot()
 
-# Authentication setup
+# Authentication setup - automatically try to authenticate
 if not chatbot.auth_success:
     chatbot.auth_success = chatbot.setup_authentication()
 
