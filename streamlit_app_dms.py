@@ -543,10 +543,12 @@ if chatbot.auth_success and chatbot.genai_client:
             query_type = chatbot.classify_query_type(prompt)
             try:
                 result = chatbot.process_query(prompt)
+                if result is None:
+                    raise ValueError("process_query returned None")
                 if isinstance(result, tuple) and len(result) == 2:
                     response_text, sources = result
                 else:
-                    raise ValueError("Unexpected return type from process_query()")
+                    raise ValueError("Unexpected return type from process_query(): " + str(type(result)))
             except Exception as e:
                 response_text = f"❌ System error: {str(e)}"
                 sources = []
