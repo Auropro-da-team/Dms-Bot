@@ -541,11 +541,15 @@ if chatbot.auth_success and chatbot.genai_client:
         with st.chat_message("assistant"):
             # Show different spinner messages based on query type
             query_type = chatbot.classify_query_type(prompt)
-            result = chatbot.process_query(prompt)
-            if result:
-                response_text, sources = result
-            else:
-                response_text, sources = "❌ No response generated due to internal error.", []
+            try:
+                result = chatbot.process_query(prompt)
+                if isinstance(result, tuple) and len(result) == 2:
+                    response_text, sources = result
+                else:
+                    raise ValueError("Unexpected return type from process_query()")
+            except Exception as e:
+                response_text = f"❌ System error: {str(e)}"
+                sources = []
 
             #if query_type in ["greeting", "general"]:
                 #with st.spinner("💭 Thinking..."):
