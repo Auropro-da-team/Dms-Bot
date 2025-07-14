@@ -312,6 +312,11 @@ If the question cannot be answered from the documentation, clearly state this an
 
     def process_query(self, user_query: str) -> tuple[str, List[Dict[str, Any]]]:
         """Process user query with intelligent routing - RAG only when needed"""
+        if self.genai_client is None:
+            logger.error("genai_client is not initialized.")
+            return "❌ GenAI client not initialized. Please try again later.", []
+
+        
         try:
             # Classify query type to determine if RAG search is needed
             query_type = self.classify_query_type(user_query)
