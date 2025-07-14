@@ -91,8 +91,6 @@ class DMSChatbot:
         self.credentials = None
         self.auth_success = False
         
-    # --- START OF AUTHENTICATION FIX ---
-    # Replaced the interactive dropdown with an automatic method for Streamlit Cloud
     def setup_authentication_from_secrets(self) -> bool:
         """Setup authentication automatically using Streamlit secrets"""
         try:
@@ -110,12 +108,10 @@ class DMSChatbot:
         except Exception as e:
             st.sidebar.error(f"❌ Authentication from secrets failed: {str(e)}")
             return False
-    # --- END OF AUTHENTICATION FIX ---
     
     def initialize_clients(self) -> bool:
         """Initialize Vertex AI and GenAI clients"""
         try:
-            # This now correctly uses the credentials loaded from secrets
             vertexai.init(
                 project=GCP_PROJECT_ID, 
                 location=GCP_REGION, 
@@ -128,7 +124,6 @@ class DMSChatbot:
                 location=GCP_REGION,
             )
             
-            # This definition is kept for reference; the RAG is enabled on the backend
             self.tools_for_gemini = [
                 types.Tool(
                     retrieval=types.Retrieval(
@@ -174,24 +169,32 @@ class DMSChatbot:
             query_type = self.classify_query_type(user_query)
             genai_contents = [types.Content(role="user", parts=[types.Part(text=self.get_enhanced_persona_prompt(user_query, query_type))])]
             
-            tools_for_call = None
-            if query_type in ["greeting", "general"]:
-                generate_content_config = types.GenerateContentConfig(temperature=0.7, top_p=0.9, top_k=40, max_output_tokens=2048, candidate_count=1, safety_settings=[types.SafetySetting(category="HARM_CATEGORY_HATE_SPEECH", threshold="BLOCK_MEDIUM_AND_ABOVE"), types.SafetySetting(category="HARM_CATEGORY_DANGEROUS_CONTENT", threshold="BLOCK_MEDIUM_AND_ABOVE"), types.SafetySetting(category="HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold="BLOCK_MEDIUM_AND_ABOVE"), types.SafetySetting(category="HARM_CATEGORY_HARASSMENT", threshold="BLOCK_MEDIUM_AND_ABOVE")], response_mime_type="text/plain")
-            else:
-                generate_content_config = types.GenerateContentConfig(temperature=0.1, top_p=0.9, top_k=40, max_output_tokens=8192, candidate_count=1, safety_settings=[types.SafetySetting(category="HARM_CATEGORY_HATE_SPEECH", threshold="BLOCK_MEDIUM_AND_ABOVE"), types.SafetySetting(category="HARM_CATEGORY_DANGEROUS_CONTENT", threshold="BLOCK_MEDIUM_AND_ABOVE"), types.SafetySetting(category="HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold="BLOCK_MEDIUM_AND_ABOVE"), types.SafetySetting(category="HARM_CATEGORY_HARASSMENT", threshold="BLOCK_MEDIUM_AND_ABOVE")], response_mime_type="text/plain")
-                # We define the tools, but DO NOT pass them to the function call below.
-                tools_for_call = self.tools_for_gemini
-            
             # --- START OF API CALL FIX ---
-            # This is the correct function call path that exists on the client object.
-            # The 'generation_config' is the correct parameter name.
-            # The 'tools' parameter is INTENTIONALLY REMOVED because the error proves it's not valid here.
-            # RAG is enabled automatically by Vertex AI when configured in the GCP project.
-            response_stream = self.genai_client.models.generate_content_stream(
-                model=self.model_name,
-                contents=genai_contents,
-                generation_config=generate_content_config
-            )
+            # This is the definitive fix. We use the old-style syntax that passes parameters
+            # individually, which is compatible with the library version on Streamlit Cloud.
+            if query_type in ["greeting", "general"]:
+                response_stream = self.genai_client.models.generate_content_stream(
+                    model_name=self.model_name,
+                    contents=genai_contents,
+                    # Old-style parameters
+                    temperature=0.7,
+                    top_p=0.9,
+                    top_k=40,
+                    max_output_tokens=2048,
+                    candidate_count=1
+                )
+            else: # dms_specific
+                response_stream = self.genai_client.models.generate_content_stream(
+                    model_name=self.model_name,
+                    contents=genai_contents,
+                    # Old-style parameters
+                    temperature=0.1,
+                    top_p=0.9,
+                    top_k=40,
+                    max_output_tokens=8192,
+                    candidate_count=1
+                    # 'tools' parameter is correctly omitted as RAG is backend-enabled.
+                )
             # --- END OF API CALL FIX ---
             
             response_text = ""
@@ -247,7 +250,6 @@ def get_chatbot():
 
 chatbot = get_chatbot()
 
-# --- Use the new, non-interactive authentication method ---
 if not chatbot.auth_success:
     chatbot.auth_success = chatbot.setup_authentication_from_secrets()
 
