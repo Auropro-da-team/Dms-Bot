@@ -362,22 +362,16 @@ If the question cannot be answered from the documentation, clearly state this an
                 )
             
             # --------------------- START OF FIX ---------------------
-            # In the 'google.genai' library, tools are attached to the model object, not passed to the generation function.
-            # This is the only change needed to fix the TypeError.
+            # The error is calling .models.generate_content_stream. 
+            # The correct high-level method is directly on the client object itself.
+            # This version of the call accepts the 'tools' keyword argument correctly.
+            # The only change is deleting ".models" from the original line.
             
-            # 1. Instantiate the model, passing the tools here. 
-            #    'tools_to_use' will be None for general chat, which is correct.
-            model_instance = genai.GenerativeModel(
-                model_name=self.model_name,
-                tools=tools_to_use
-            )
-
-            # 2. Call generate_content on the new model instance. Notice 'stream=True' is used,
-            #    and the 'tools' keyword argument is now correctly removed from this call.
-            response_stream = model_instance.generate_content(
+            response_stream = self.genai_client.generate_content_stream(
+                model=f"models/{self.model_name}", # The model name needs the 'models/' prefix for this call
                 contents=genai_contents,
                 generation_config=generate_content_config,
-                stream=True
+                tools=tools_to_use
             )
             # ---------------------- END OF FIX ----------------------
             
