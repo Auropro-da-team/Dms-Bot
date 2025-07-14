@@ -179,8 +179,8 @@ class DMSChatbot:
                 location=GCP_REGION,
             )
             
-            # This 'tools_for_gemini' definition is kept for logical consistency, even though it's not explicitly passed.
-            # The backend uses the RAG corpus associated with the project.
+            # This 'tools_for_gemini' definition is kept for logical consistency.
+            # RAG is enabled on the backend for Vertex AI calls.
             self.tools_for_gemini = [
                 types.Tool(
                     retrieval=types.Retrieval(
@@ -359,16 +359,15 @@ If the question cannot be answered from the documentation, clearly state this an
                 )
             
             # --------------------- START OF FIX ---------------------
-            # The correct function is `self.genai_client.models.generate_content_stream`.
-            # The fix is to use this correct function path and REMOVE the `tools` parameter,
-            # as it is not accepted by this specific function in the library.
-            # The RAG is activated automatically by the backend.
+            # Get a model reference from the client, then call generate_content_stream on the model.
+            # This is the correct API usage pattern for the genai.Client library for Vertex AI.
+            # The 'generation_config' keyword is also corrected from the original 'config'.
             
-            response_stream = self.genai_client.models.generate_content_stream(
-                model=self.model_name,
+            model = self.genai_client.get_model(name=f"models/{self.model_name}")
+            response_stream = model.generate_content_stream(
                 contents=genai_contents,
-                config=generate_content_config,
-                # The 'tools' argument is intentionally removed from this call.
+                generation_config=generate_content_config
+                # No 'tools' parameter is needed; RAG is enabled via backend project configuration.
             )
             # ---------------------- END OF FIX ----------------------
             
