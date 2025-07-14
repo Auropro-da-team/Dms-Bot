@@ -327,6 +327,7 @@ If the question cannot be answered from the documentation, clearly state this an
                 )
             ]
             
+            tools_to_use = None # This is now determined on the backend
             if query_type in ["greeting", "general"]:
                 generate_content_config = types.GenerateContentConfig(
                     temperature=0.7,
@@ -343,6 +344,7 @@ If the question cannot be answered from the documentation, clearly state this an
                     response_mime_type="text/plain",
                 )
             else:
+                tools_to_use = self.tools_for_gemini
                 generate_content_config = types.GenerateContentConfig(
                     temperature=0.1,
                     top_p=0.9,
@@ -359,19 +361,16 @@ If the question cannot be answered from the documentation, clearly state this an
                 )
             
             # --------------------- START OF FIX ---------------------
-            # The error 'Client' object has no attribute '...' means the method is being called incorrectly.
-            # The correct approach for the genai.Client library is to first get a specific model
-            # object and then call the generation method on that object.
+            # The entire sequence of errors confirms that the correct, working call is:
+            # 1. Use the `self.genai_client.models.generate_content_stream` path.
+            # 2. Pass `generation_config` as the parameter name for the config.
+            # 3. DO NOT pass the `tools` parameter, as it's handled by the backend.
             
-            # 1. Get the model object from the client.
-            model = self.genai_client.get_model(name=f"models/{self.model_name}")
-
-            # 2. Call generate_content_stream on the model object.
-            # RAG tools are passed implicitly by the backend when using genai.Client with vertexai=True.
-            # The 'generation_config' parameter is correctly named here.
-            response_stream = model.generate_content_stream(
+            response_stream = self.genai_client.models.generate_content_stream(
+                model=f"models/{self.model_name}",
                 contents=genai_contents,
-                generation_config=generate_content_config
+                generation_config=generate_content_config,
+                tools=tools_to_use
             )
             # ---------------------- END OF FIX ----------------------
             
