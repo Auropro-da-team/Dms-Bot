@@ -4,6 +4,8 @@ import vertexai
 import json
 import logging
 from typing import List, Dict, Any, Optional
+from google.cloud import storage
+from google.oauth2 import service_account
 
 # --- IMPORTS FOR GOOGLE.GENAI (THE CORRECT WAY FOR RAG CORPUS) ---
 from google import genai
@@ -16,7 +18,10 @@ from google.oauth2 import service_account
 GCP_PROJECT_ID = "prj-auropro-dev"
 GCP_REGION = "us-central1"
 RAG_CORPUS_RESOURCE_NAME = "projects/694447741103/locations/us-central1/ragCorpora/6917529027641081856"
-
+credentials = service_account.Credentials.from_service_account_info(
+    st.secrets["gcp_service_account"]
+client = storage.Client(credentials=credentials, project=credentials.project_id) 
+)
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -126,7 +131,7 @@ class DMSChatbot:
             
             # Convert StreamlitSecrets to regular dict
             service_account_dict = dict(service_account_info)
-            
+          
             # Create credentials from service account info
             self.credentials = service_account.Credentials.from_service_account_info(
                 service_account_dict,
