@@ -1,4 +1,4 @@
-import os
+]import os
 import streamlit as st
 import vertexai
 import json
@@ -96,7 +96,7 @@ class DMSChatbot:
     def __init__(self):
         self.genai_client = None
         self.tools_for_gemini = []
-        self.model_name = "gemini-1.5-flash-001"  # Using a stable, recommended model
+        self.model_name = "gemini-1.5-flash-001"  # Using a stable, recommended model for RAG
         self.credentials = None
         self.auth_success = False
         self.storage_client = None
@@ -317,10 +317,8 @@ If the question cannot be answered from the documentation, clearly state this an
                 logger.error("GenAI client is not initialized.")
                 return "❌ Internal error: GenAI client not initialized.", []
 
-            # Classify query type to determine if RAG search is needed
             query_type = self.classify_query_type(user_query)
             
-            # Prepare content with appropriate persona
             genai_contents = [
                 types.Content(
                     role="user",
@@ -330,7 +328,7 @@ If the question cannot be answered from the documentation, clearly state this an
                 )
             ]
             
-            # Adjust generation config based on query type
+            tools_to_use = None
             if query_type in ["greeting", "general"]:
                 generate_content_config = types.GenerateContentConfig(
                     temperature=0.7,
@@ -346,8 +344,8 @@ If the question cannot be answered from the documentation, clearly state this an
                     ],
                     response_mime_type="text/plain",
                 )
-                tools_to_use = None # No RAG tools for general chat
             else:
+                tools_to_use = self.tools_for_gemini
                 generate_content_config = types.GenerateContentConfig(
                     temperature=0.1,
                     top_p=0.9,
@@ -362,32 +360,33 @@ If the question cannot be answered from the documentation, clearly state this an
                     ],
                     response_mime_type="text/plain",
                 )
-                tools_to_use = self.tools_for_gemini # Use RAG tools for DMS queries
-            
-            # Generate response with streaming
-            response_stream = self.genai_client.models.generate_content_stream(
-                model=self.model_name,
-                contents=genai_contents,
-                config=generate_content_config,
-                tools=tools_to_use
-            )
             
             # --------------------- START OF FIX ---------------------
-            # Add a safety check to ensure the API call returned a valid stream
-            if response_stream is None:
-                logger.error("API call to generate_content_stream returned None. This indicates a potential authentication or client configuration issue.")
-                error_msg = "I'm sorry, I was unable to connect to the AI service. Please ask the administrator to check the application logs."
-                return error_msg, []
-            # ---------------------- END OF FIX ----------------------
+            # In the 'google.genai' library, tools are attached to the model object, not passed to the generation function.
+            # This is the only change needed to fix the TypeError.
+            
+            # 1. Instantiate the model, passing the tools here. 
+            #    'tools_to_use' will be None for general chat, which is correct.
+            model_instance = genai.GenerativeModel(
+                model_name=self.model_name,
+                tools=tools_to_use
+            )
 
+            # 2. Call generate_content on the new model instance. Notice 'stream=True' is used,
+            #    and the 'tools' keyword argument is now correctly removed from this call.
+            response_stream = model_instance.generate_content(
+                contents=genai_contents,
+                generation_config=generate_content_config,
+                stream=True
+            )
+            # ---------------------- END OF FIX ----------------------
+            
             response_text = ""
             retrieved_sources = []
             sources_set = set()
             
-            # Process streaming response
             for chunk in response_stream:
                 if chunk.candidates and chunk.candidates[0].content:
-                    # Extract grounding metadata ONLY for DMS-specific queries
                     if query_type == "dms_specific":
                         if hasattr(chunk.candidates[0].content, 'grounding_metadata') and \
                            chunk.candidates[0].content.grounding_metadata:
@@ -411,20 +410,17 @@ If the question cannot be answered from the documentation, clearly state this an
                                                     "relevance_score": getattr(ref, 'relevance_score', 0.0)
                                                 })
                     
-                    # Extract text content
                     if hasattr(chunk.candidates[0].content, 'parts'):
                         for part in chunk.candidates[0].content.parts:
                             if hasattr(part, 'text') and part.text:
                                 response_text += part.text
             
-            # Fallback response if no content generated
             if not response_text:
                 if query_type in ["greeting", "general"]:
                     response_text = "Hello! I'm here to help you with your DMS (Document Management System). What would you like to know?"
                 else:
                     response_text = "I apologize, but I couldn't generate a response for your query. Please try rephrasing your question or check if it's related to the DMS system."
             
-            # Sort sources by relevance if available (only for DMS queries)
             if retrieved_sources:
                 retrieved_sources.sort(key=lambda x: x.get('relevance_score', 0.0), reverse=True)
             
@@ -441,13 +437,12 @@ If the question cannot be answered from the documentation, clearly state this an
             st.markdown("---")
             st.markdown("### 🔍 **Sources Referenced:**")
             
-            for i, source in enumerate(sources[:5]):  # Limit to top 5 sources
+            for i, source in enumerate(sources[:5]):
                 title = source.get("title", "Unknown Document")
                 uri = source.get("uri", "#")
                 page = source.get("page_number", "N/A")
                 relevance = source.get("relevance_score", 0.0)
                 
-                # Create expandable source info
                 with st.expander(f"📄 **Source {i+1}:** {title}", expanded=False):
                     col1, col2 = st.columns(2)
                     with col1:
@@ -460,7 +455,6 @@ If the question cannot be answered from the documentation, clearly state this an
                         st.markdown(f"**Link:** [View Document]({uri})")
         elif query_type == "dms_specific" and not sources:
             st.info("💡 This response was generated using general AI knowledge. For specific DMS procedures, try asking about particular features or processes.")
-        # For greetings/general queries, don't show any source information
 
 # Initialize the chatbot
 @st.cache_resource
@@ -483,10 +477,8 @@ if chatbot.auth_success and chatbot.genai_client is None:
 
 # Chat interface
 if chatbot.auth_success and chatbot.genai_client:
-    # Initialize chat history
     if "messages" not in st.session_state:
         st.session_state.messages = []
-        # Add welcome message
         welcome_msg = """
         👋 **Welcome to the DMS Chatbot!** 
         
@@ -501,50 +493,36 @@ if chatbot.auth_success and chatbot.genai_client:
         """
         st.session_state.messages.append({"role": "assistant", "content": welcome_msg})
     
-    # Display chat history
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
     
-    # Chat input
     if prompt := st.chat_input("Ask me anything about the DMS..."):
-        # Add user message
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
         
-        # Generate response
         with st.chat_message("assistant"):
             query_type = chatbot.classify_query_type(prompt)
-            
-            # --------------------- START OF FIX ---------------------
-            # Restore the spinner and simplify the call to process_query
-            spinner_text = "🤔 Thinking and searching the documentation..." if query_type == "dms_specific" else "💭 Thinking..."
-            with st.spinner(spinner_text):
-                try:
-                    # The process_query method is designed to always return a tuple, even on error.
+            try:
+                # The spinner logic can remain as it was
+                spinner_text = "🤔 Thinking and searching the documentation..." if query_type == "dms_specific" else "💭 Thinking..."
+                with st.spinner(spinner_text):
                     response_text, sources = chatbot.process_query(prompt)
-                except Exception as e:
-                    # This is a fallback for truly unexpected errors.
-                    logger.error(f"A critical, unhandled error occurred in the chat loop: {e}", exc_info=True)
-                    response_text = f"❌ A critical system error occurred. Please contact support."
-                    sources = []
-            # ---------------------- END OF FIX ----------------------
 
-            # Display response
+            except Exception as e:
+                response_text = f"❌ System error: {str(e)}"
+                sources = []
+
             st.markdown(response_text)
             
-            # Display sources only for DMS-specific queries
             chatbot.display_sources(sources, query_type)
             
-            # Add to chat history
             st.session_state.messages.append({"role": "assistant", "content": response_text})
     
-    # Sidebar features
     st.sidebar.markdown("---")
     st.sidebar.markdown("### 🎯 **Quick Actions**")
     
-    # Quick question buttons
     quick_questions = [
         "How do I create a new document?",
         "What are the user roles in DMS?",
@@ -558,7 +536,6 @@ if chatbot.auth_success and chatbot.genai_client:
             st.session_state.messages.append({"role": "user", "content": question})
             st.rerun()
     
-    # Clear chat button
     if st.sidebar.button("🗑️ Clear Chat History"):
         st.session_state.messages = []
         st.rerun()
