@@ -153,6 +153,9 @@ class DMSChatbot:
     def _auth_default(self) -> bool:
         st.sidebar.warning("⚠️ Default credentials disabled. Use secrets.toml instead.")
         return False
+import google.auth
+google.auth._default._get_explicit_environ_credentials = lambda: None
+google.auth._default._detect_gce = lambda: False
 
     def initialize_clients(self) -> bool:
         """Initialize Vertex AI and GenAI clients"""
