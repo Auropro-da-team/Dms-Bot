@@ -18,10 +18,6 @@ from google.oauth2 import service_account
 GCP_PROJECT_ID = "prj-auropro-dev"
 GCP_REGION = "us-central1"
 RAG_CORPUS_RESOURCE_NAME = "projects/694447741103/locations/us-central1/ragCorpora/6917529027641081856"
-credentials = service_account.Credentials.from_service_account_info(
-    st.secrets["gcp_service_account"]
-)
-client = storage.Client(credentials=credentials, project=credentials.project_id) 
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -155,8 +151,8 @@ class DMSChatbot:
             return False
 
     def _auth_default(self) -> bool:
-    st.sidebar.warning("⚠️ Default credentials disabled. Use secrets.toml instead.")
-    return False
+        st.sidebar.warning("⚠️ Default credentials disabled. Use secrets.toml instead.")
+        return False
 
     def initialize_clients(self) -> bool:
         """Initialize Vertex AI and GenAI clients"""
