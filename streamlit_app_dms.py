@@ -285,45 +285,60 @@ If the question cannot be answered from the documentation, clearly state this an
             # Generate response based on query type
             if query_type in ["greeting", "general"]:
                 # For greetings/general: No RAG, higher temperature
-                response_stream = self.genai_client.models.generate_content_stream(
-                    model=self.model_name,  # Fixed: using 'model' instead of 'model_name'
-                    contents=genai_contents,
-                    config=types.GenerateContentConfig(  # Fixed: using 'config' parameter
-                        temperature=0.7,
-                        top_p=0.9,
-                        top_k=40,
-                        max_output_tokens=2048,
-                        candidate_count=1
+                try:
+                    response = self.genai_client.models.generate_content(
+                        model=self.model_name,
+                        contents=genai_contents,
+                        config=types.GenerateContentConfig(
+                            temperature=0.7,
+                            top_p=0.9,
+                            top_k=40,
+                            max_output_tokens=2048,
+                            candidate_count=1
+                        )
                     )
-                )
+                    
+                    # Extract response text
+                    response_text = ""
+                    if response and response.candidates and response.candidates[0].content:
+                        if hasattr(response.candidates[0].content, 'parts'):
+                            for part in response.candidates[0].content.parts:
+                                if hasattr(part, 'text') and part.text:
+                                    response_text += part.text
+                    
+                    return response_text or "Hello! I'm here to help you with your DMS (Document Management System). What would you like to know?", []
+                    
+                except Exception as e:
+                    logger.error(f"Error in greeting/general query: {str(e)}")
+                    return "Hello! I'm here to help you with your DMS (Document Management System). What would you like to know?", []
+            
             else:
                 # For DMS-specific queries: Use RAG with lower temperature
-                response_stream = self.genai_client.models.generate_content_stream(
-                    model=self.model_name,  # Fixed: using 'model' instead of 'model_name'
-                    contents=genai_contents,
-                    config=types.GenerateContentConfig(  # Fixed: using 'config' parameter
-                        temperature=0.1,
-                        top_p=0.9,
-                        top_k=40,
-                        max_output_tokens=8192,
-                        candidate_count=1
-                    ),
-                    tools=self.tools_for_gemini  # Use RAG tools only for DMS queries
-                )
-            
-            response_text = ""
-            retrieved_sources = []
-            sources_set = set()
-            
-            # Process streaming response
-            for chunk in response_stream:
-                if chunk.candidates and chunk.candidates[0].content:
-                    # Extract grounding metadata for DMS queries
-                    if query_type == "dms_specific":
-                        if hasattr(chunk.candidates[0].content, 'grounding_metadata') and \
-                           chunk.candidates[0].content.grounding_metadata:
+                try:
+                    response = self.genai_client.models.generate_content(
+                        model=self.model_name,
+                        contents=genai_contents,
+                        config=types.GenerateContentConfig(
+                            temperature=0.1,
+                            top_p=0.9,
+                            top_k=40,
+                            max_output_tokens=8192,
+                            candidate_count=1
+                        ),
+                        tools=self.tools_for_gemini
+                    )
+                    
+                    response_text = ""
+                    retrieved_sources = []
+                    sources_set = set()
+                    
+                    # Extract response text and sources
+                    if response and response.candidates and response.candidates[0].content:
+                        # Extract grounding metadata
+                        if hasattr(response.candidates[0].content, 'grounding_metadata') and \
+                           response.candidates[0].content.grounding_metadata:
                             
-                            metadata = chunk.candidates[0].content.grounding_metadata
+                            metadata = response.candidates[0].content.grounding_metadata
                             if hasattr(metadata, 'retrieval_queries'):
                                 for query in metadata.retrieval_queries:
                                     if hasattr(query, 'retrieved_references'):
@@ -341,25 +356,26 @@ If the question cannot be answered from the documentation, clearly state this an
                                                     "page_number": source_key[2],
                                                     "relevance_score": getattr(ref, 'relevance_score', 0.0)
                                                 })
+                        
+                        # Extract text content
+                        if hasattr(response.candidates[0].content, 'parts'):
+                            for part in response.candidates[0].content.parts:
+                                if hasattr(part, 'text') and part.text:
+                                    response_text += part.text
                     
-                    # Extract text content
-                    if hasattr(chunk.candidates[0].content, 'parts'):
-                        for part in chunk.candidates[0].content.parts:
-                            if hasattr(part, 'text') and part.text:
-                                response_text += part.text
-            
-            # Fallback response if no content generated
-            if not response_text:
-                if query_type in ["greeting", "general"]:
-                    response_text = "Hello! I'm here to help you with your DMS (Document Management System). What would you like to know?"
-                else:
-                    response_text = "I apologize, but I couldn't generate a response for your query. Please try rephrasing your question or check if it's related to the DMS system."
-            
-            # Sort sources by relevance if available
-            if retrieved_sources:
-                retrieved_sources.sort(key=lambda x: x.get('relevance_score', 0.0), reverse=True)
-            
-            return response_text, retrieved_sources
+                    # Fallback response if no content generated
+                    if not response_text:
+                        response_text = "I apologize, but I couldn't generate a response for your query. Please try rephrasing your question or check if it's related to the DMS system."
+                    
+                    # Sort sources by relevance if available
+                    if retrieved_sources:
+                        retrieved_sources.sort(key=lambda x: x.get('relevance_score', 0.0), reverse=True)
+                    
+                    return response_text, retrieved_sources
+                    
+                except Exception as e:
+                    logger.error(f"Error in DMS-specific query: {str(e)}")
+                    return f"I encountered an error while processing your DMS query: {str(e)}. Please try again or rephrase your question.", []
             
         except Exception as e:
             logger.error(f"Query processing error: {str(e)}")
