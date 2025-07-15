@@ -315,6 +315,7 @@ If the question cannot be answered from the documentation, clearly state this an
             else:
                 # For DMS-specific queries: Use RAG with lower temperature
                 try:
+                    # FIXED: Pass tools in the config, not as a separate parameter
                     response = self.genai_client.models.generate_content(
                         model=self.model_name,
                         contents=genai_contents,
@@ -323,9 +324,9 @@ If the question cannot be answered from the documentation, clearly state this an
                             top_p=0.9,
                             top_k=40,
                             max_output_tokens=8192,
-                            candidate_count=1
-                        ),
-                        tools=self.tools_for_gemini
+                            candidate_count=1,
+                            tools=self.tools_for_gemini  # MOVED HERE - tools should be in config
+                        )
                     )
                     
                     response_text = ""
@@ -381,7 +382,7 @@ If the question cannot be answered from the documentation, clearly state this an
             logger.error(f"Query processing error: {str(e)}")
             error_msg = f"I encountered an error while processing your query: {str(e)}. Please try again or rephrase your question."
             return error_msg, []
-    
+            
     def display_sources(self, sources: List[Dict[str, Any]], query_type: str):
         """Display retrieved sources with enhanced formatting"""
         if query_type == "dms_specific" and sources:
