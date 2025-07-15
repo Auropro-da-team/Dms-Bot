@@ -286,9 +286,9 @@ If the question cannot be answered from the documentation, clearly state this an
             if query_type in ["greeting", "general"]:
                 # For greetings/general: No RAG, higher temperature
                 response_stream = self.genai_client.models.generate_content_stream(
-                    model=self.model_name,
+                    model=self.model_name,  # Fixed: using 'model' instead of 'model_name'
                     contents=genai_contents,
-                    generation_config=types.GenerationConfig(
+                    config=types.GenerateContentConfig(  # Fixed: using 'config' parameter
                         temperature=0.7,
                         top_p=0.9,
                         top_k=40,
@@ -299,9 +299,9 @@ If the question cannot be answered from the documentation, clearly state this an
             else:
                 # For DMS-specific queries: Use RAG with lower temperature
                 response_stream = self.genai_client.models.generate_content_stream(
-                    model=self.model_name,
+                    model=self.model_name,  # Fixed: using 'model' instead of 'model_name'
                     contents=genai_contents,
-                    generation_config=types.GenerationConfig(
+                    config=types.GenerateContentConfig(  # Fixed: using 'config' parameter
                         temperature=0.1,
                         top_p=0.9,
                         top_k=40,
